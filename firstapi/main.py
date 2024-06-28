@@ -1,8 +1,22 @@
-from fastapi import FastAPI, HTTPException,status
+from typing import Any, List
+from fastapi import FastAPI, HTTPException,status, Depends
 from fastapi.responses import JSONResponse
 from models import Curso
+from time import sleep
 
-app = FastAPI()
+app = FastAPI(
+    title="Aprendizado dos métodos",
+    version="0.0.1",
+    description="Api de aprendizado dos métodos utilizados no FastAPI"
+)
+
+def fakeDb():
+    try:
+        print("Abrindo conexão com banco de dados")
+        sleep(1)
+    finally:
+        print("Fechando conexão com banco de dados")
+        sleep(1)
 
 cursos = {
     1: {
@@ -17,8 +31,11 @@ cursos = {
     }
 }
 
-@app.get('/cursos')
-async def getCursos():
+@app.get('/cursos',
+         description="Retorna todos os cursos ou a lista vazia",
+         summary="Retorna uma lista de cursos",
+         response_model=List[Curso])
+async def getCursos(db: Any=Depends(fakeDb)):
     return cursos
 
 @app.get('/cursos/{id}')
@@ -29,9 +46,9 @@ async def getCursoPorId(id: int):
     except KeyError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Não encontrado")
-        
+
 @app.post('/cursos', status_code=status.HTTP_201_CREATED)
-async def postCurso(curso: Curso):
+async def postCurso(curso: Curso, db: Any=Depends(fakeDb)):
     if curso.id not in cursos:
         cursos[curso.id] = curso
         return curso
@@ -40,7 +57,7 @@ async def postCurso(curso: Curso):
                             detail="Curso já existente")
 
 @app.put('/cursos/{id}', status_code=status.HTTP_202_ACCEPTED)
-async def putCurso(id: int, curso: Curso):
+async def putCurso(id: int, curso: Curso, db: Any=Depends(fakeDb)):
    if id in cursos:
         cursos[id] = curso
         return curso
@@ -49,7 +66,7 @@ async def putCurso(id: int, curso: Curso):
                            detail="Curso não existente com este id")
 
 @app.delete('/cursos/{id}')
-async def deleteCurso(id: int):
+async def deleteCurso(id: int, db: Any=Depends(fakeDb)):
     if id in cursos:
         del cursos[id]
         return JSONResponse(status_code=status.HTTP_200_OK, content=None)
